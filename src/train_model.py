@@ -136,7 +136,7 @@ def log_to_mlflow(model, params, metrics, run_name="XGBoost_Best"):
 
 def save_and_push_model(model, model_repo_id: str, token: str):
     os.makedirs("models", exist_ok=True)
-    model_path = os.path.join("models", "best_model.joblib")
+    model_path = os.path.join("models", "best_model.pkl")
     joblib.dump(model, model_path)
     print(f"Saved model to {model_path}")
 
@@ -146,7 +146,7 @@ def save_and_push_model(model, model_repo_id: str, token: str):
 
     api.upload_file(
         path_or_fileobj=model_path,
-        path_in_repo="model.joblib",
+        path_in_repo="best_model.pkl",
         repo_id=model_repo_id,
         repo_type="model",
     )
@@ -159,7 +159,7 @@ def main():
         "HF_DATASET_REPO_ID", "mukherjee78/tourism-wellness-package"
     )
     model_repo_id = os.getenv(
-        "HF_MODEL_REPO_ID", "mukherjee78/tourism-wellness-model"
+        "HF_MODEL_REPO_ID", "mukherjee78/tourism-wellness-best-model"
     )
     token = os.getenv("HF_TOKEN")
 

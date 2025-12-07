@@ -1,0 +1,22 @@
+artifact_path: /Users/siddhartha/Projects/gl/tourism_mlops_project/notebooks/mlruns/1/models/m-fac303359d9d4e479683b5f753420cc2/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.10.19
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.7.2
+mlflow_version: 3.7.0
+model_id: m-fac303359d9d4e479683b5f753420cc2
+model_size_bytes: 9381746
+model_uuid: m-fac303359d9d4e479683b5f753420cc2
+prompts: null
+run_id: 2c926d535ed34e7d9038b08f8ab210aa
+utc_time_created: '2025-12-07 12:33:43.019497'

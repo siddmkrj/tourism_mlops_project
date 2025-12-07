@@ -71,16 +71,7 @@ if submitted:
         "MonthlyIncome": MonthlyIncome
     }])
     
-    if "Unnamed: 0" in getattr(getattr(model, "feature_names_in_", []), "tolist", lambda: [])():
-        input_df.insert(0, "Unnamed: 0", 0)
-    elif "Unnamed: 0" in getattr(model, "feature_names_in_", []):
-        input_df.insert(0, "Unnamed: 0", 0)
-    else:
-        if "Unnamed: 0" not in input_df.columns:
-            input_df.insert(0, "Unnamed: 0", 0)
-    
     expected_columns = [
-        "Unnamed: 0",
         "Age",
         "TypeofContact",
         "CityTier",

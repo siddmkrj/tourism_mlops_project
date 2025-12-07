@@ -10,7 +10,7 @@ env:
   HF_TOKEN: ${{ secrets.HF_TOKEN }}
   HUGGINGFACEHUB_API_TOKEN: ${{ secrets.HF_TOKEN }}
   HF_DATASET_REPO_ID: "mukherjee78/tourism-wellness-package"
-  HF_MODEL_REPO_ID: "mukherjee78/tourism-wellness-model"
+  HF_MODEL_REPO_ID: "mukherjee78/tourism-wellness-best-model"
   HF_SPACE_REPO_ID: "mukherjee78/tourism-wellness-space"
 
 jobs:

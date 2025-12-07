@@ -16,7 +16,7 @@ def load_raw_from_hf(dataset_repo_id: str) -> pd.DataFrame:
 def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     df_clean = df.copy()
 
-    cols_to_drop = ["CustomerID", "Unnamed: 0"]
+    cols_to_drop = ["CustomerID"]
 
     df_clean = df_clean.drop(columns=cols_to_drop)
     print(f"Dropped columns: {cols_to_drop}")

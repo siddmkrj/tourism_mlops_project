@@ -24,10 +24,6 @@ def main():
     ]
 
     for local_path, remote_path in files_to_upload:
-        if not os.path.exists(local_path):
-            print(f"⚠️ Warning: {local_path} not found locally, skipping.")
-            continue
-
         print(f"Uploading {local_path} to {space_repo_id}:{remote_path}")
         api.upload_file(
             path_or_fileobj=local_path,
