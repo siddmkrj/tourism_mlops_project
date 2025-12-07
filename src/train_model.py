@@ -16,9 +16,6 @@ TARGET_COL = "ProdTaken"
 
 
 def download_splits_from_hf(dataset_repo_id: str):
-    """
-    Download train and test splits from the Hugging Face dataset hub.
-    """
     train_local_path = hf_hub_download(
         repo_id=dataset_repo_id,
         repo_type="dataset",
@@ -33,19 +30,12 @@ def download_splits_from_hf(dataset_repo_id: str):
     train_df = pd.read_csv(train_local_path)
     test_df = pd.read_csv(test_local_path)
 
-    # Drop index column if present
-    if "Unnamed: 0" in train_df.columns:
-        train_df = train_df.drop(columns=["Unnamed: 0"])
-    if "Unnamed: 0" in test_df.columns:
-        test_df = test_df.drop(columns=["Unnamed: 0"])
-
+    print(f"Downloaded train to {train_local_path}, shape={train_df.shape}")
+    print(f"Downloaded test to {test_local_path}, shape={test_df.shape}")
+    
     return train_df, test_df
 
-
 def build_and_train_model(train_df: pd.DataFrame):
-    """
-    Build preprocessing + XGBoost model pipeline and train on the train split.
-    """
     X_train = train_df.drop(columns=[TARGET_COL])
     y_train = train_df[TARGET_COL]
 
@@ -55,33 +45,19 @@ def build_and_train_model(train_df: pd.DataFrame):
     print("Numeric columns:", numeric_cols)
     print("Categorical columns:", categorical_cols)
 
-    numeric_transformer = Pipeline(
-        steps=[
-            ("imputer", SimpleImputer(strategy="median")),
-        ]
-    )
-
-    categorical_transformer = Pipeline(
-        steps=[
-            ("imputer", SimpleImputer(strategy="most_frequent")),
-            ("onehot", OneHotEncoder(handle_unknown="ignore")),
-        ]
-    )
-
     preprocessor = ColumnTransformer(
         transformers=[
-            ("num", numeric_transformer, numeric_cols),
-            ("cat", categorical_transformer, categorical_cols),
+            ("num", "passthrough", numeric_cols),
+            ("cat", OneHotEncoder(handle_unknown='ignore'), categorical_cols),
         ]
     )
 
-    # XGBoost model with tuned hyperparameters (as in the notebook)
     model = XGBClassifier(
-        n_estimators=300,
-        max_depth=4,
-        learning_rate=0.05,
         subsample=0.8,
-        colsample_bytree=0.8,
+        max_depth=7,
+        learning_rate=0.05,
+        colsample_bytree=1.0,
+        n_estimators=300,
         eval_metric="logloss",
         n_jobs=-1,
         random_state=42,
@@ -127,10 +103,8 @@ def save_and_push_model(model, model_repo_id: str, token: str):
 
     api = HfApi(token=token)
 
-    # Create (or reuse) the model repo
     api.create_repo(repo_id=model_repo_id, repo_type="model", exist_ok=True)
 
-    # Upload model file
     api.upload_file(
         path_or_fileobj=model_path,
         path_in_repo="model.joblib",
@@ -138,7 +112,6 @@ def save_and_push_model(model, model_repo_id: str, token: str):
         repo_type="model",
     )
 
-    # Simple model card (brief description)
     model_card_text = (
         "# Tourism Wellness Package Classifier (XGBoost)\n\n"
         "This model predicts whether a customer is likely to purchase the Wellness Tourism Package.\n\n"
