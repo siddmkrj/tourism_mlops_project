@@ -49,6 +49,12 @@ def build_and_train_model(train_df: pd.DataFrame):
     X_train = train_df.drop(columns=[TARGET_COL])
     y_train = train_df[TARGET_COL]
 
+    cols_to_drop = ["CustomerID", "Unnamed: 0"]
+    existing_cols_to_drop = [col for col in cols_to_drop if col in X_train.columns]
+    if existing_cols_to_drop:
+        print(f"Warning: Dropping identifier columns that shouldn't be present: {existing_cols_to_drop}")
+        X_train = X_train.drop(columns=existing_cols_to_drop)
+
     numeric_cols = X_train.select_dtypes(include=["number"]).columns.tolist()
     categorical_cols = X_train.select_dtypes(exclude=["number"]).columns.tolist()
 
@@ -59,7 +65,8 @@ def build_and_train_model(train_df: pd.DataFrame):
         transformers=[
             ("num", "passthrough", numeric_cols),
             ("cat", OneHotEncoder(handle_unknown='ignore'), categorical_cols),
-        ]
+        ],
+        remainder='drop'
     )
 
     model = XGBClassifier(
@@ -90,6 +97,12 @@ def build_and_train_model(train_df: pd.DataFrame):
 def evaluate_model(model, test_df: pd.DataFrame):
     X_test = test_df.drop(columns=[TARGET_COL])
     y_test = test_df[TARGET_COL]
+
+    cols_to_drop = ["CustomerID", "Unnamed: 0"]
+    existing_cols_to_drop = [col for col in cols_to_drop if col in X_test.columns]
+    if existing_cols_to_drop:
+        print(f"Warning: Dropping identifier columns that shouldn't be present: {existing_cols_to_drop}")
+        X_test = X_test.drop(columns=existing_cols_to_drop)
 
     y_pred = model.predict(X_test)
     y_prob = model.predict_proba(X_test)[:, 1]
