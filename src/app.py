@@ -50,8 +50,6 @@ with st.form("input_form"):
     submitted = st.form_submit_button("Predict")
 
 if submitted:
-    # Create DataFrame with columns in the exact order expected by the model
-    # Order matches the training data (excluding Unnamed: 0 and ProdTaken)
     input_df = pd.DataFrame([{
         "Age": Age,
         "TypeofContact": TypeofContact,
@@ -73,19 +71,14 @@ if submitted:
         "MonthlyIncome": MonthlyIncome
     }])
     
-    # Add dummy index column if the trained model expects 'Unnamed: 0'
     if "Unnamed: 0" in getattr(getattr(model, "feature_names_in_", []), "tolist", lambda: [])():
         input_df.insert(0, "Unnamed: 0", 0)
     elif "Unnamed: 0" in getattr(model, "feature_names_in_", []):
-        # fallback: if feature_names_in_ is a plain array/list
         input_df.insert(0, "Unnamed: 0", 0)
     else:
-        # In case the currently loaded model was trained with 'Unnamed: 0' but feature_names_in_ is not available,
-        # we still add the column as a safe default to avoid missing-column errors.
         if "Unnamed: 0" not in input_df.columns:
             input_df.insert(0, "Unnamed: 0", 0)
     
-    # Ensure columns are in the correct order (matching training data)
     expected_columns = [
         "Unnamed: 0",
         "Age",
@@ -115,7 +108,6 @@ if submitted:
     except ValueError as e:
         st.error(f"Error making prediction: {str(e)}")
         st.error(f"Input columns: {list(input_df.columns)}")
-        # Try to get expected columns from the model if possible
         if hasattr(model, 'named_steps') and 'preprocessor' in model.named_steps:
             preprocessor = model.named_steps['preprocessor']
             if hasattr(preprocessor, 'transformers_'):

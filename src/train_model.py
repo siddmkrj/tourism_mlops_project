@@ -51,15 +51,11 @@ if submitted:
     }
     input_df = pd.DataFrame([input_dict])
 
-    # Add dummy index column if the trained model expects 'Unnamed: 0'
     if "Unnamed: 0" in getattr(getattr(model, "feature_names_in_", []), "tolist", lambda: [])():
         input_df.insert(0, "Unnamed: 0", 0)
     elif "Unnamed: 0" in getattr(model, "feature_names_in_", []):
-        # fallback: if feature_names_in_ is a plain array/list
         input_df.insert(0, "Unnamed: 0", 0)
     else:
-        # In case the currently loaded model was trained with 'Unnamed: 0' but feature_names_in_ is not available,
-        # we still add the column as a safe default to avoid missing-column errors.
         if "Unnamed: 0" not in input_df.columns:
             input_df.insert(0, "Unnamed: 0", 0)
 
