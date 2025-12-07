@@ -16,10 +16,12 @@ def load_raw_from_hf(dataset_repo_id: str) -> pd.DataFrame:
 def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     df_clean = df.copy()
 
-    # Drop ID-like columns
+    # Drop ID-like columns and stray index columns
     cols_to_drop = []
     if "CustomerID" in df_clean.columns:
         cols_to_drop.append("CustomerID")
+    if "Unnamed: 0" in df_clean.columns:
+        cols_to_drop.append("Unnamed: 0")
 
     if cols_to_drop:
         df_clean = df_clean.drop(columns=cols_to_drop)
