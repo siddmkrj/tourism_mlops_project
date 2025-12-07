@@ -15,9 +15,9 @@ def main():
     )
 
     files_to_upload = [
-        ("Dockerfile", "Dockerfile"),
-        ("app.py", "app.py"),
-        ("requirements.txt", "requirements.txt"),
+        ("src/Dockerfile", "Dockerfile"),
+        ("src/app.py", "app.py"),
+        ("src/requirements.txt", "requirements.txt"),
     ]
 
     for local_path, remote_path in files_to_upload:
