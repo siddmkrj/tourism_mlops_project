@@ -73,13 +73,39 @@ if submitted:
         "MonthlyIncome": MonthlyIncome
     }])
     
+    # Add dummy index column if the trained model expects 'Unnamed: 0'
+    if "Unnamed: 0" in getattr(getattr(model, "feature_names_in_", []), "tolist", lambda: [])():
+        input_df.insert(0, "Unnamed: 0", 0)
+    elif "Unnamed: 0" in getattr(model, "feature_names_in_", []):
+        # fallback: if feature_names_in_ is a plain array/list
+        input_df.insert(0, "Unnamed: 0", 0)
+    else:
+        # In case the currently loaded model was trained with 'Unnamed: 0' but feature_names_in_ is not available,
+        # we still add the column as a safe default to avoid missing-column errors.
+        if "Unnamed: 0" not in input_df.columns:
+            input_df.insert(0, "Unnamed: 0", 0)
+    
     # Ensure columns are in the correct order (matching training data)
     expected_columns = [
-        "Age", "TypeofContact", "CityTier", "DurationOfPitch", "Occupation",
-        "Gender", "NumberOfPersonVisiting", "NumberOfFollowups", "ProductPitched",
-        "PreferredPropertyStar", "MaritalStatus", "NumberOfTrips", "Passport",
-        "PitchSatisfactionScore", "OwnCar", "NumberOfChildrenVisiting",
-        "Designation", "MonthlyIncome"
+        "Unnamed: 0",
+        "Age",
+        "TypeofContact",
+        "CityTier",
+        "DurationOfPitch",
+        "Occupation",
+        "Gender",
+        "NumberOfPersonVisiting",
+        "NumberOfFollowups",
+        "ProductPitched",
+        "PreferredPropertyStar",
+        "MaritalStatus",
+        "NumberOfTrips",
+        "Passport",
+        "PitchSatisfactionScore",
+        "OwnCar",
+        "NumberOfChildrenVisiting",
+        "Designation",
+        "MonthlyIncome",
     ]
     input_df = input_df[expected_columns]
     

@@ -1,191 +1,92 @@
-import os
-import joblib
+import streamlit as st
 import pandas as pd
+import joblib
 
-from huggingface_hub import HfApi, hf_hub_download
+model = joblib.load("models/best_model.joblib")
 
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.impute import SimpleImputer
-from sklearn.pipeline import Pipeline
-from sklearn.metrics import accuracy_score, classification_report
+st.title("Tourism Wellness Package Purchase Prediction")
 
-from xgboost import XGBClassifier
+with st.form("input_form"):
+    Age = st.number_input("Age", min_value=18, max_value=100, value=30)
+    TypeofContact = st.selectbox("Type of Contact", ["Self Enquiry", "Company Invited", "Employee Referral"])
+    CityTier = st.selectbox("City Tier", [1, 2, 3])
+    DurationOfPitch = st.number_input("Duration of Pitch", min_value=0, max_value=100, value=30)
+    Occupation = st.selectbox("Occupation", ["Salaried", "Business", "Retired", "Student", "Other"])
+    Gender = st.selectbox("Gender", ["Male", "Female"])
+    NumberOfPersonVisiting = st.number_input("Number of Person Visiting", min_value=1, max_value=10, value=1)
+    NumberOfFollowups = st.number_input("Number of Followups", min_value=0, max_value=20, value=1)
+    ProductPitched = st.selectbox("Product Pitched", ["Product1", "Product2", "Product3"])
+    PreferredPropertyStar = st.selectbox("Preferred Property Star", [3, 4, 5])
+    MaritalStatus = st.selectbox("Marital Status", ["Single", "Married", "Divorced"])
+    NumberOfTrips = st.number_input("Number of Trips", min_value=0, max_value=50, value=1)
+    Passport = st.selectbox("Passport", ["Yes", "No"])
+    PitchSatisfactionScore = st.number_input("Pitch Satisfaction Score", min_value=1, max_value=5, value=3)
+    OwnCar = st.selectbox("Own Car", ["Yes", "No"])
+    NumberOfChildrenVisiting = st.number_input("Number of Children Visiting", min_value=0, max_value=10, value=0)
+    Designation = st.selectbox("Designation", ["Manager", "Executive", "Staff", "Other"])
+    MonthlyIncome = st.number_input("Monthly Income", min_value=0, max_value=1000000, value=50000)
 
-TARGET_COL = "ProdTaken"
+    submitted = st.form_submit_button("Predict")
 
+if submitted:
+    input_dict = {
+        "Age": Age,
+        "TypeofContact": TypeofContact,
+        "CityTier": CityTier,
+        "DurationOfPitch": DurationOfPitch,
+        "Occupation": Occupation,
+        "Gender": Gender,
+        "NumberOfPersonVisiting": NumberOfPersonVisiting,
+        "NumberOfFollowups": NumberOfFollowups,
+        "ProductPitched": ProductPitched,
+        "PreferredPropertyStar": PreferredPropertyStar,
+        "MaritalStatus": MaritalStatus,
+        "NumberOfTrips": NumberOfTrips,
+        "Passport": Passport,
+        "PitchSatisfactionScore": PitchSatisfactionScore,
+        "OwnCar": OwnCar,
+        "NumberOfChildrenVisiting": NumberOfChildrenVisiting,
+        "Designation": Designation,
+        "MonthlyIncome": MonthlyIncome,
+    }
+    input_df = pd.DataFrame([input_dict])
 
-def download_splits_from_hf(dataset_repo_id: str):
-    """
-    Download train and test splits from the Hugging Face dataset hub.
-    """
-    train_local_path = hf_hub_download(
-        repo_id=dataset_repo_id,
-        repo_type="dataset",
-        filename="data/train.csv",
-    )
-    test_local_path = hf_hub_download(
-        repo_id=dataset_repo_id,
-        repo_type="dataset",
-        filename="data/test.csv",
-    )
+    # Add dummy index column if the trained model expects 'Unnamed: 0'
+    if "Unnamed: 0" in getattr(getattr(model, "feature_names_in_", []), "tolist", lambda: [])():
+        input_df.insert(0, "Unnamed: 0", 0)
+    elif "Unnamed: 0" in getattr(model, "feature_names_in_", []):
+        # fallback: if feature_names_in_ is a plain array/list
+        input_df.insert(0, "Unnamed: 0", 0)
+    else:
+        # In case the currently loaded model was trained with 'Unnamed: 0' but feature_names_in_ is not available,
+        # we still add the column as a safe default to avoid missing-column errors.
+        if "Unnamed: 0" not in input_df.columns:
+            input_df.insert(0, "Unnamed: 0", 0)
 
-    train_df = pd.read_csv(train_local_path)
-    test_df = pd.read_csv(test_local_path)
+    expected_columns = [
+        "Unnamed: 0",
+        "Age",
+        "TypeofContact",
+        "CityTier",
+        "DurationOfPitch",
+        "Occupation",
+        "Gender",
+        "NumberOfPersonVisiting",
+        "NumberOfFollowups",
+        "ProductPitched",
+        "PreferredPropertyStar",
+        "MaritalStatus",
+        "NumberOfTrips",
+        "Passport",
+        "PitchSatisfactionScore",
+        "OwnCar",
+        "NumberOfChildrenVisiting",
+        "Designation",
+        "MonthlyIncome",
+    ]
 
-    # Drop index column if present
-    if 'Unnamed: 0' in train_df.columns:
-        train_df = train_df.drop(columns=['Unnamed: 0'])
-    if 'Unnamed: 0' in test_df.columns:
-        test_df = test_df.drop(columns=['Unnamed: 0'])
+    input_df = input_df[expected_columns]
 
-    return train_df, test_df
-
-
-def build_and_train_model(train_df: pd.DataFrame):
-    """
-    Build preprocessing + XGBoost model pipeline and train on the train split.
-    """
-    X_train = train_df.drop(columns=[TARGET_COL])
-    y_train = train_df[TARGET_COL]
-
-    numeric_cols = X_train.select_dtypes(include=["number"]).columns.tolist()
-    categorical_cols = X_train.select_dtypes(exclude=["number"]).columns.tolist()
-
-    print("Numeric columns:", numeric_cols)
-    print("Categorical columns:", categorical_cols)
-
-    numeric_transformer = Pipeline(
-        steps=[
-            ("imputer", SimpleImputer(strategy="median")),
-        ]
-    )
-
-    categorical_transformer = Pipeline(
-        steps=[
-            ("imputer", SimpleImputer(strategy="most_frequent")),
-            ("onehot", OneHotEncoder(handle_unknown="ignore")),
-        ]
-    )
-
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ("num", numeric_transformer, numeric_cols),
-            ("cat", categorical_transformer, categorical_cols),
-        ]
-    )
-
-    model = XGBClassifier(
-        n_estimators=300,
-        max_depth=4,
-        learning_rate=0.05,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        eval_metric="logloss",
-        n_jobs=-1,
-        random_state=42,
-        tree_method="hist",
-    )
-
-    clf = Pipeline(
-        steps=[
-            ("preprocessor", preprocessor),
-            ("model", model),
-        ]
-    )
-
-    print("Training XGBoost model...")
-    clf.fit(X_train, y_train)
-    print("✅ Training completed.")
-    return clf
-
-
-def evaluate_model(model, test_df: pd.DataFrame):
-    """
-    Evaluate the trained model on the test split and print metrics.
-    """
-    X_test = test_df.drop(columns=[TARGET_COL])
-    y_test = test_df[TARGET_COL]
-
-    y_pred = model.predict(X_test)
-
-    acc = accuracy_score(y_test, y_pred)
-    print(f"Test Accuracy: {acc:.4f}")
-    print("\nClassification Report:\n", classification_report(y_test, y_pred))
-
-
-def save_and_push_model(model, model_repo_id: str, token: str):
-    """
-    Save the trained model locally and push both the model file and a simple
-    model card (README) to the Hugging Face model hub.
-    """
-    os.makedirs("models", exist_ok=True)
-    model_path = os.path.join("models", "best_model.joblib")
-    joblib.dump(model, model_path)
-    print(f"Saved model to {model_path}")
-
-    api = HfApi(token=token)
-
-
-    api.create_repo(repo_id=model_repo_id, repo_type="model", exist_ok=True)
-
-    api.upload_file(
-        path_or_fileobj=model_path,
-        path_in_repo="model.joblib",
-        repo_id=model_repo_id,
-        repo_type="model",
-    )
-
-    model_card_text = (
-        "# Tourism Wellness Package Classifier (XGBoost)\n\n"
-        "This model predicts whether a customer is likely to purchase the Wellness Tourism Package.\n\n"
-        "## Inputs\n"
-        "- Customer demographic and interaction features (e.g., Age, CityTier, NumberOfTrips, etc.).\n\n"
-        "## Target\n"
-        "- `ProdTaken` (0 = No purchase, 1 = Purchase).\n\n"
-        "## Training\n"
-        "- Trained using an XGBoost (XGBClassifier) model inside a scikit-learn pipeline.\n"
-        "- Preprocessing: median imputation for numeric features, most-frequent imputation and one-hot encoding for categorical features.\n"
-    )
-
-    model_card_path = os.path.join("models", "README.md")
-    with open(model_card_path, "w", encoding="utf-8") as f:
-        f.write(model_card_text)
-
-    api.upload_file(
-        path_or_fileobj=model_card_path,
-        path_in_repo="README.md",
-        repo_id=model_repo_id,
-        repo_type="model",
-    )
-
-    print(f"✅ Model and model card uploaded to HF model hub: {model_repo_id}")
-
-
-def main():
-    dataset_repo_id = os.getenv(
-        "HF_DATASET_REPO_ID", "mukherjee78/tourism-wellness-package"
-    )
-    model_repo_id = os.getenv(
-        "HF_MODEL_REPO_ID", "mukherjee78/tourism-wellness-model"
-    )
-    token = os.getenv("HF_TOKEN")
-
-    if token is None:
-        raise ValueError(
-            "HF_TOKEN environment variable is not set. "
-            "Please set it in your environment or GitHub Actions secrets."
-        )
-
-    print(f"Downloading train/test from dataset repo: {dataset_repo_id}")
-    train_df, test_df = download_splits_from_hf(dataset_repo_id)
-
-    model = build_and_train_model(train_df)
-    evaluate_model(model, test_df)
-
-    print("Saving and pushing model to HF Model Hub...")
-    save_and_push_model(model, model_repo_id, token)
-
-
-if __name__ == "__main__":
-    main()
+    prediction = model.predict(input_df)[0]
+    result = "Will Purchase" if prediction == 1 else "Will Not Purchase"
+    st.write(f"Prediction: **{result}**")
