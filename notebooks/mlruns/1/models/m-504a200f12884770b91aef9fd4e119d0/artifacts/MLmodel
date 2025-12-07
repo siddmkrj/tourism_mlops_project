@@ -1,4 +1,4 @@
-artifact_path: /Users/siddhartha/Projects/gl/tourism_mlops_project/notebooks/mlruns/2/models/m-895ceba34e6c4a188962053147e22388/artifacts
+artifact_path: /Users/siddhartha/Projects/gl/tourism_mlops_project/notebooks/mlruns/1/models/m-504a200f12884770b91aef9fd4e119d0/artifacts
 flavors:
   python_function:
     env:
@@ -14,9 +14,9 @@ flavors:
     serialization_format: cloudpickle
     sklearn_version: 1.7.2
 mlflow_version: 3.7.0
-model_id: m-895ceba34e6c4a188962053147e22388
-model_size_bytes: 9436767
-model_uuid: m-895ceba34e6c4a188962053147e22388
+model_id: m-504a200f12884770b91aef9fd4e119d0
+model_size_bytes: 9381746
+model_uuid: m-504a200f12884770b91aef9fd4e119d0
 prompts: null
-run_id: 6934243f595b44648ac531ac1385993d
-utc_time_created: '2025-12-07 05:32:12.727471'
+run_id: d3398697b4a94869879a8b43278e65d1
+utc_time_created: '2025-12-07 12:13:35.374480'

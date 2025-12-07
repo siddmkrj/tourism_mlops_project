@@ -2,13 +2,23 @@ import os
 import joblib
 import pandas as pd
 
+import mlflow
+import mlflow.sklearn
+
 from huggingface_hub import HfApi, hf_hub_download
 
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score,
+)
 
 from xgboost import XGBClassifier
 
@@ -78,24 +88,53 @@ def build_and_train_model(train_df: pd.DataFrame):
 
 
 def evaluate_model(model, test_df: pd.DataFrame):
-    """
-    Evaluate the trained model on the test split and print metrics.
-    """
     X_test = test_df.drop(columns=[TARGET_COL])
     y_test = test_df[TARGET_COL]
 
     y_pred = model.predict(X_test)
+    y_prob = model.predict_proba(X_test)[:, 1]
 
-    acc = accuracy_score(y_test, y_pred)
-    print(f"Test Accuracy: {acc:.4f}")
+    metrics = {
+        "accuracy": accuracy_score(y_test, y_pred),
+        "precision": precision_score(y_test, y_pred, zero_division=0),
+        "recall": recall_score(y_test, y_pred, zero_division=0),
+        "f1": f1_score(y_test, y_pred, zero_division=0),
+        "roc_auc": roc_auc_score(y_test, y_prob),
+    }
+
+    print(f"Test Accuracy: {metrics['accuracy']:.4f}")
     print("\nClassification Report:\n", classification_report(y_test, y_pred))
+
+    return metrics
+
+
+def extract_model_params(model):
+    xgb_model = model.named_steps["model"]
+    params = {
+        "subsample": xgb_model.subsample,
+        "max_depth": xgb_model.max_depth,
+        "learning_rate": xgb_model.learning_rate,
+        "colsample_bytree": xgb_model.colsample_bytree,
+        "n_estimators": xgb_model.n_estimators,
+        "eval_metric": xgb_model.eval_metric,
+        "random_state": xgb_model.random_state,
+        "tree_method": xgb_model.tree_method,
+    }
+    return params
+
+
+def log_to_mlflow(model, params, metrics, run_name="XGBoost_Best"):
+    mlflow.set_experiment("tourism_wellness_modeling")
+    
+    with mlflow.start_run(run_name=run_name):
+        mlflow.log_params(params)
+        for k, v in metrics.items():
+            mlflow.log_metric(k, v)
+        mlflow.sklearn.log_model(model, artifact_path="xgb_model")
+        print(f"✅ Logged to MLflow with run name: {run_name}")
 
 
 def save_and_push_model(model, model_repo_id: str, token: str):
-    """
-    Save the trained model locally and push both the model file and a simple
-    model card (README) to the Hugging Face model hub.
-    """
     os.makedirs("models", exist_ok=True)
     model_path = os.path.join("models", "best_model.joblib")
     joblib.dump(model, model_path)
@@ -112,30 +151,7 @@ def save_and_push_model(model, model_repo_id: str, token: str):
         repo_type="model",
     )
 
-    model_card_text = (
-        "# Tourism Wellness Package Classifier (XGBoost)\n\n"
-        "This model predicts whether a customer is likely to purchase the Wellness Tourism Package.\n\n"
-        "## Inputs\n"
-        "- Customer demographic and interaction features such as Age, CityTier, Occupation, NumberOfTrips, Passport, etc.\n\n"
-        "## Target\n"
-        "- `ProdTaken` (0 = No purchase, 1 = Purchase).\n\n"
-        "## Training\n"
-        "- Trained using an XGBoost (XGBClassifier) model inside a scikit-learn pipeline.\n"
-        "- Preprocessing: median imputation for numeric features, and most-frequent imputation plus one-hot encoding for categorical features.\n"
-    )
-
-    model_card_path = os.path.join("models", "README.md")
-    with open(model_card_path, "w", encoding="utf-8") as f:
-        f.write(model_card_text)
-
-    api.upload_file(
-        path_or_fileobj=model_card_path,
-        path_in_repo="README.md",
-        repo_id=model_repo_id,
-        repo_type="model",
-    )
-
-    print(f"✅ Model and model card uploaded to HF model hub: {model_repo_id}")
+    print(f"✅ Model uploaded to HF model hub: {model_repo_id}")
 
 
 def main():
@@ -157,7 +173,10 @@ def main():
     train_df, test_df = download_splits_from_hf(dataset_repo_id)
 
     model = build_and_train_model(train_df)
-    evaluate_model(model, test_df)
+    metrics = evaluate_model(model, test_df)
+
+    params = extract_model_params(model)
+    log_to_mlflow(model, params, metrics)
 
     print("Saving and pushing model to HF Model Hub...")
     save_and_push_model(model, model_repo_id, token)
