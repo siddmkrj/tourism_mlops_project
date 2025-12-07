@@ -93,13 +93,6 @@ if submitted:
     ]
     input_df = input_df[expected_columns]
     
-    # TEMPORARY WORKAROUND: Add dummy identifier columns that the currently deployed model expects
-    # The deployed model was trained on data that included these columns, so it expects them during prediction
-    # Once the model is retrained with the fixed train_model.py (which explicitly drops these columns),
-    # this workaround can be removed. These columns won't affect predictions but are required by the model's ColumnTransformer
-    # input_df['CustomerID'] = 0
-    # input_df['Unnamed: 0'] = 0
-    
     try:
         prediction = model.predict(input_df)[0]
         prob = model.predict_proba(input_df)[0][1]
