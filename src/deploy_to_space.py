@@ -5,6 +5,9 @@ def main():
     space_repo_id = os.getenv("HF_SPACE_REPO_ID", "mukherjee78/tourism-wellness-space")
     token = os.getenv("HF_TOKEN")
 
+    ABSOLUTE_PATH = os.path.dirname(os.path.abspath(__file__))
+    print(ABSOLUTE_PATH)
+
     api = HfApi(token=token)
 
     api.create_repo(
@@ -15,9 +18,9 @@ def main():
     )
 
     files_to_upload = [
-        ("src/Dockerfile", "Dockerfile"),
-        ("src/app.py", "app.py"),
-        ("src/requirements.txt", "requirements.txt"),
+        (f"{ABSOLUTE_PATH}/Dockerfile", "Dockerfile"),
+        (f"{ABSOLUTE_PATH}/app.py", "app.py"),
+        (f"{ABSOLUTE_PATH}/requirements.txt", "requirements.txt"),
     ]
 
     for local_path, remote_path in files_to_upload:

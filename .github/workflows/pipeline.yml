@@ -105,4 +105,4 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          python src/deploy_to_hf_space.py
+          python src/deploy_to_space.py

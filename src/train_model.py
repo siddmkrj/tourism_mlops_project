@@ -33,6 +33,12 @@ def download_splits_from_hf(dataset_repo_id: str):
     train_df = pd.read_csv(train_local_path)
     test_df = pd.read_csv(test_local_path)
 
+    # Drop index column if present
+    if 'Unnamed: 0' in train_df.columns:
+        train_df = train_df.drop(columns=['Unnamed: 0'])
+    if 'Unnamed: 0' in test_df.columns:
+        test_df = test_df.drop(columns=['Unnamed: 0'])
+
     return train_df, test_df
 
 
