@@ -1,0 +1,108 @@
+name: Tourism Project Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  HF_TOKEN: ${{ secrets.HF_TOKEN }}
+  HUGGINGFACEHUB_API_TOKEN: ${{ secrets.HF_TOKEN }}
+  HF_DATASET_REPO_ID: "mukherjee78/tourism-wellness-package"
+  HF_MODEL_REPO_ID: "mukherjee78/tourism-wellness-model"
+  HF_SPACE_REPO_ID: "mukherjee78/tourism-wellness-space"
+
+jobs:
+
+  register-dataset:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Upload Dataset to Hugging Face Hub
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python src/register_dataset.py
+
+  data-prep:
+    needs: register-dataset
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Data Preparation
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python src/data_prep.py
+
+  model-traning:
+    needs: data-prep
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Start MLflow Server
+        run: |
+          nohup mlflow ui --host 0.0.0.0 --port 5000 &
+          sleep 5
+
+      - name: Model Building and Registration
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python src/train_model.py
+
+  deploy-hosting:
+    needs: [model-traning, data-prep, register-dataset]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Push files to Frontend Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python src/deploy_to_hf_space.py
