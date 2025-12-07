@@ -93,6 +93,11 @@ if submitted:
     ]
     input_df = input_df[expected_columns]
     
+    # Add dummy identifier columns that the model expects
+    # These columns won't affect predictions but are required by the model's ColumnTransformer
+    input_df['CustomerID'] = 0
+    input_df['Unnamed: 0'] = 0
+    
     try:
         prediction = model.predict(input_df)[0]
         prob = model.predict_proba(input_df)[0][1]
