@@ -15,8 +15,8 @@ def main():
     )
 
     files_to_upload = [
-        ("Dockerfile", "notebooks/deployment_app/Dockerfile"),
-        ("app.py", "notebooks/deployment_app/app.py"),
+        ("Dockerfile", "../notebooks/deployment_app/Dockerfile"),
+        ("app.py", "../notebooks/deployment_app/app.py"),
         ("requirements.txt", "../requirements.txt"),
     ]
 
